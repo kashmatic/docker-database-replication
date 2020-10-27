@@ -1,0 +1,85 @@
+---
+version: "3.3"
+
+services:
+  portainer:
+    image: portainer/portainer-ce
+    ports:
+    - 8000:8000
+    - 9000:9000
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./portainer_data:/data
+    networks:
+    - cisnet
+
+  app:
+    image: test:1.0.0
+    environment:
+      POSTGRES_URI: postgresql://testuser:password@primary:5432/vcpstatus
+      FLASK_CONFIG: development
+      FLASK_APP: run.py
+    ports:
+      - 5000:5000
+    networks:
+      cisnet:
+
+  primary:
+    hostname: 'primary'
+    image: crunchydata/crunchy-postgres:centos7-13.0-4.5.0
+    environment:
+      PGHOST: /tmp
+      MAX_CONNECTIONS: 10
+      MAX_WAL_SENDERS: 5
+      PG_MODE: primary
+      PG_PRIMARY_USER: primaryuser
+      PG_PRIMARY_PASSWORD: password
+      PG_DATABASE: vcpstatus
+      PG_USER: testuser
+      PG_PASSWORD: password
+      PG_ROOT_PASSWORD: password
+      PG_PRIMARY_PORT: 5432
+    volumes:
+    - pg-primary-vol:/pgdata
+    ports:
+    - "5432:5432"
+    networks:
+    - cisnet
+    # deploy:
+    #   placement:
+    #     constraints:
+    #     - node.labels.type == primary
+    #     - node.role == worker
+  replica:
+    image: crunchydata/crunchy-postgres:centos7-13.0-4.5.0
+    environment:
+      PGHOST: /tmp
+      MAX_CONNECTIONS: 10
+      MAX_WAL_SENDERS: 5
+      PG_MODE: replica
+      PG_PRIMARY_HOST: primary
+      PG_PRIMARY_PORT: 5432
+      PG_PRIMARY_USER: primaryuser
+      PG_PRIMARY_PASSWORD: password
+      PG_DATABASE: vcpstatus
+      PG_USER: testuser
+      PG_PASSWORD: password
+      PG_ROOT_PASSWORD: password
+    volumes:
+    - pg-replica-vol:/pgdata
+    ports:
+    - "5433:5432"
+    networks:
+    - cisnet
+    # deploy:
+    #   placement:
+    #     constraints:
+    #     - node.labels.type != primary
+    #     - node.role == worker
+
+networks:
+  cisnet:
+
+volumes:
+  pg-primary-vol:
+  pg-replica-vol:

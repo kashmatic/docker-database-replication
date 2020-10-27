@@ -41,5 +41,3 @@ testdb=> \d
 --------+--------------------+-------+-------------
  public | aemployee          | table | primaryuser
 ```
-# docker-database-replication
-# docker-database-replication
